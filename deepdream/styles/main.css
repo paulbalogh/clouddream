@@ -44,6 +44,7 @@ h1, h2, h3, h4 {
     font-weight:100;
     margin:0;
     padding:0;
+    word-wrap:break-word;
 }
 
 img {
@@ -256,4 +257,9 @@ img {
     .deckgrid[deckgrid]::before {
         content: '1 .column.size-1-1';
     }
+}
+
+.title {
+  margin: auto;
+  text-align: center;
 }
