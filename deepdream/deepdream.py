@@ -41,7 +41,7 @@ def preprocess(net, img):
 def deprocess(net, img):
     return np.dstack((img + net.transformer.mean['data'])[::-1])
 
-def make_step(net, step_size=1.5, end='inception_4c/output', jitter=32, clip=True):
+def make_step(net, step_size=1.5, end='inception_4c/output', jitter=json_data['jitter'], clip=True):
     '''Basic gradient ascent step.'''
 
     src = net.blobs['data'] # input image is storred in Net's 'data' blob
@@ -49,7 +49,7 @@ def make_step(net, step_size=1.5, end='inception_4c/output', jitter=32, clip=Tru
 
     ox, oy = np.random.randint(-jitter, jitter+1, 2)
     src.data[0] = np.roll(np.roll(src.data[0], ox, -1), oy, -2) # apply jitter shift
-            
+
     net.forward(end=end)
     dst.diff[:] = dst.data  # specify the optimiation objective
     net.backward(start=end)
@@ -58,17 +58,17 @@ def make_step(net, step_size=1.5, end='inception_4c/output', jitter=32, clip=Tru
     src.data[:] += step_size/np.abs(g).mean() * g
 
     src.data[0] = np.roll(np.roll(src.data[0], -ox, -1), -oy, -2) # unshift image
-            
+
     if clip:
         bias = net.transformer.mean['data']
-        src.data[:] = np.clip(src.data, -bias, 255-bias)    
+        src.data[:] = np.clip(src.data, -bias, 255-bias)
 
-def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='inception_4c/output', clip=True, **step_params):
+def deepdream(net, base_img, iter_n=json_data['iterations'], octave_n=json_data['octaves'], octave_scale=1.4, end='inception_4c/output', clip=True, **step_params):
     # prepare base images for all octaves
     octaves = [preprocess(net, base_img)]
     for i in xrange(octave_n-1):
         octaves.append(nd.zoom(octaves[-1], (1, 1.0/octave_scale,1.0/octave_scale), order=1))
-    
+
     src = net.blobs['data']
     detail = np.zeros_like(octaves[-1]) # allocate image for network-produced details
     for octave, octave_base in enumerate(octaves[::-1]):
@@ -82,7 +82,7 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
         src.data[0] = octave_base+detail
         for i in xrange(iter_n):
             make_step(net, end=end, clip=clip, **step_params)
-            
+
             # visualization
             vis = deprocess(net, src.data[0])
             if not clip: # adjust image contrast if clipping is disabled
@@ -90,7 +90,7 @@ def deepdream(net, base_img, iter_n=10, octave_n=4, octave_scale=1.4, end='incep
             #showarray(vis)
             print octave, i, end, vis.shape
             clear_output(wait=True)
-            
+
         # extract details produced on the current octave
         detail = src.data[0]-octave_base
     # returning the resulting image
